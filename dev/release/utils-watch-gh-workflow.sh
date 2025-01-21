@@ -18,6 +18,7 @@
 # under the License.
 
 set -e
+set -u
 set -o pipefail
 
 if [ "$#" -ne 2 ]; then
@@ -27,7 +28,7 @@ fi
 
 TAG=$1
 WORKFLOW=$2
-REPOSITORY="apache/arrow"
+: "${REPOSITORY:=${GITHUB_REPOSITORY:-apache/arrow}}"
 
 echo "Looking for GitHub Actions workflow on ${REPOSITORY}:${TAG}"
 RUN_ID=""
@@ -35,12 +36,18 @@ while [[ -z "${RUN_ID}" ]]
 do
     echo "Waiting for run to start..."
     RUN_ID=$(gh run list \
+                --branch "${TAG}" \
+                --jq '.[].databaseId' \
+                --json databaseId \
+                --limit 1 \
                 --repo "${REPOSITORY}" \
-                --workflow="${WORKFLOW}" \
-                --json 'databaseId,event,headBranch,status' \
-                --jq ".[] | select(.event == \"push\" and .headBranch == \"${TAG}\") | .databaseId")
-      sleep 1
-  done
+                --workflow "${WORKFLOW}")
+    sleep 60
+done
 
 echo "Found GitHub Actions workflow with ID: ${RUN_ID}"
-gh run watch --repo "${REPOSITORY}" --exit-status ${RUN_ID}
+gh run watch \
+   --exit-status \
+   --interval 60 \
+   --repo "${REPOSITORY}" \
+   ${RUN_ID}
