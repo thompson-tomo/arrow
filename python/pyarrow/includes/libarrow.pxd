@@ -652,6 +652,7 @@ cdef extern from "arrow/api.h" namespace "arrow" nogil:
         c_bool truncate_metadata
         c_bool show_field_metadata
         c_bool show_schema_metadata
+        int element_size_limit
 
         @staticmethod
         PrettyPrintOptions Defaults()
@@ -2227,6 +2228,8 @@ cdef extern from "arrow/util/thread_pool.h" namespace "arrow::internal" nogil:
 
 
 cdef extern from "arrow/compute/api.h" namespace "arrow::compute" nogil:
+
+    CStatus InitializeCompute " arrow::compute::Initialize"()
 
     cdef cppclass CExecBatch "arrow::compute::ExecBatch":
         vector[CDatum] values
