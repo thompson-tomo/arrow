@@ -75,17 +75,32 @@ def test_constructor_raises():
 
 
 def test_list_format():
-    arr = pa.array([[1], None, [2, 3, None]])
+    arr = pa.array([["foo"], None, ["bar", "a longer string", None]])
     result = arr.to_string()
     expected = """\
 [
   [
-    1
+    "foo"
   ],
   null,
   [
-    2,
-    3,
+    "bar",
+    "a longer string",
+    null
+  ]
+]"""
+    assert result == expected
+
+    result = arr.to_string(element_size_limit=10)
+    expected = """\
+[
+  [
+    "foo"
+  ],
+  null,
+  [
+    "bar",
+    "a longer (... 7 chars omitted)",
     null
   ]
 ]"""
@@ -488,15 +503,14 @@ def test_array_slice():
                 assert res.to_numpy().tolist() == expected
 
 
-@pytest.mark.numpy
 def test_array_slice_negative_step():
     # ARROW-2714
-    np_arr = np.arange(20)
-    arr = pa.array(np_arr)
+    values = list(range(20))
+    arr = pa.array(values)
     chunked_arr = pa.chunked_array([arr])
 
     cases = [
-        slice(None, None, -1),
+        slice(None, None, -1),  # GH-46606
         slice(None, 6, -2),
         slice(10, 6, -2),
         slice(8, None, -2),
@@ -510,7 +524,7 @@ def test_array_slice_negative_step():
 
     for case in cases:
         result = arr[case]
-        expected = pa.array(np_arr[case])
+        expected = pa.array(values[case], type=arr.type)
         assert result.equals(expected)
 
         result = pa.record_batch([arr], names=['f0'])[case]
@@ -518,8 +532,34 @@ def test_array_slice_negative_step():
         assert result.equals(expected)
 
         result = chunked_arr[case]
-        expected = pa.chunked_array([np_arr[case]])
+        expected = pa.chunked_array([values[case]], type=arr.type)
         assert result.equals(expected)
+
+
+def test_arange():
+    cases = [
+        (5, 103),        # Default step
+        (-2, 128, 3),
+        (4, 103, 5),
+        (10, -7, -1),
+        (100, -20, -3),
+        (0, 0),         # Empty array
+        (2, 10, -1),    # Empty array
+        (10, 3, 1),     # Empty array
+    ]
+    for case in cases:
+        result = pa.arange(*case)
+        result.validate(full=True)
+        assert result.equals(pa.array(list(range(*case)), type=pa.int64()))
+
+    # Validate memory_pool keyword argument
+    result = pa.arange(-1, 101, memory_pool=pa.default_memory_pool())
+    result.validate(full=True)
+    assert result.equals(pa.array(list(range(-1, 101)), type=pa.int64()))
+
+    # Special case for invalid step (arange does not accept step of 0)
+    with pytest.raises(pa.ArrowInvalid):
+        pa.arange(0, 10, 0)
 
 
 def test_array_diff():
