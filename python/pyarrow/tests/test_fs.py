@@ -1257,6 +1257,12 @@ def test_s3_options(pickle_module):
     assert isinstance(fs, S3FileSystem)
     assert pickle_module.loads(pickle_module.dumps(fs)) == fs
 
+    fs = S3FileSystem(tls_ca_file_path="ca.pem")
+    assert isinstance(fs, S3FileSystem)
+    assert pickle_module.loads(pickle_module.dumps(fs)) == fs
+    assert fs != S3FileSystem(tls_ca_file_path="other_ca.pem")
+    assert fs != S3FileSystem()
+
     with pytest.raises(ValueError):
         S3FileSystem(access_key='access')
     with pytest.raises(ValueError):
@@ -2043,6 +2049,8 @@ def test_concurrent_s3fs_init():
 
 
 @pytest.mark.s3
+@pytest.mark.skip(reason="atexit(ensure_s3_finalized) will be called too late "
+                  "with bundled aws-sdk-cpp 1.11.587")
 @pytest.mark.skipif(running_on_musllinux(), reason="Leaking S3ClientFinalizer causes "
                                                    "segfault on musl based systems")
 def test_uwsgi_integration():
