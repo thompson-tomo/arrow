@@ -15,28 +15,4 @@
 // specific language governing permissions and limitations
 // under the License.
 
-#pragma once
-
-#include <string>
-
-#include "arrow/util/secure_string.h"
-#include "parquet/platform.h"
-
-namespace parquet::encryption::internal {
-
-/// Encrypts "key" with "master_key", using AES-GCM and the "aad"
-PARQUET_EXPORT
-std::string EncryptKeyLocally(const ::arrow::util::SecureString& key,
-                              const ::arrow::util::SecureString& master_key,
-                              const std::string& aad);
-
-/// Decrypts encrypted key with "master_key", using AES-GCM and the "aad"
-PARQUET_EXPORT
-::arrow::util::SecureString DecryptKeyLocally(
-    const std::string& encoded_encrypted_key,
-    const ::arrow::util::SecureString& master_key, const std::string& aad);
-
-PARQUET_EXPORT
-bool ValidateKeyLength(int32_t key_length_bits);
-
-}  // namespace parquet::encryption::internal
+#define PYARROW_BUILD_TYPE "@UPPERCASE_PYBUILD_TYPE@"
